@@ -54,7 +54,7 @@
 </div>
 
 <script>
-    // 1. CONNECT TO YOUR SUPABASE (Yahan aapka apna URL aur Key hoga)
+    // 1. CONNECT TO YOUR SUPABASE
     const SUPABASE_URL = "YOUR_SUPABASE_URL"; 
     const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -64,34 +64,28 @@
         const inputField = document.getElementById(fieldId);
         if (inputField.type === "password") {
             inputField.type = "text";
-            btn.innerText = "🙈";
+            btn.innerText = "🙈"; // Change icon to blind/hidden
         } else {
             inputField.type = "password";
-            btn.innerText = "👁️";
+            btn.innerText = "👁️"; // Change icon back to visible
         }
     }
 
-    // 3. YAHAN PAR YEH NAYA CODE PASTE KARNA HAI (Purane function ko hata kar)
+    // 3. UPDATE PASSWORD FUNCTION WITH CONFIRMATION CHECK
     async function handlePasswordReset() {
         const passwordInput = document.getElementById('new-password').value;
         const confirmInput = document.getElementById('confirm-password').value;
         const submitBtn = document.getElementById('submit-btn');
 
-        // 1. Pehle validation check karein
+        // Validation 1: Length Check
         if (!passwordInput || passwordInput.length < 6) {
             showMsg("Password must be at least 6 characters long.", "error");
             return;
         }
+
+        // Validation 2: Match Check
         if (passwordInput !== confirmInput) {
             showMsg("Passwords do not match. Please check again.", "error");
-            return;
-        }
-
-        // 2. CRITICAL: Check karein ke kya browser mein session aa chuka hai?
-        const { data: sessionData } = await supabaseClient.auth.getSession();
-        
-        if (!sessionData.session) {
-            showMsg("Auth session missing! Please click the link from your email again. The link might be expired.", "error");
             return;
         }
 
@@ -99,6 +93,7 @@
         submitBtn.disabled = true;
 
         try {
+            // Processing updates on Supabase backend
             const { data, error } = await supabaseClient.auth.updateUser({
                 password: passwordInput
             });
@@ -115,7 +110,6 @@
         }
     }
 
-    // 4. SHOW MESSAGE FUNCTION (Yeh bhi aise hi niche rahega)
     function showMsg(text, type) {
         const msgDiv = document.getElementById('msg');
         msgDiv.innerText = text;
