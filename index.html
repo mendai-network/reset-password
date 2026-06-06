@@ -10,24 +10,18 @@
         .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 360px; text-align: center; }
         h2 { color: #1f2937; margin-bottom: 10px; font-size: 24px; }
         p { color: #6b7280; font-size: 14px; margin-bottom: 20px; }
-        
-        /* Wrapper to contain input and eye button */
         .input-wrapper { position: relative; margin: 12px 0; text-align: left; }
         label { font-size: 13px; color: #4b5563; font-weight: 500; display: block; margin-bottom: 4px; }
-        
         input { width: 100%; padding: 12px; padding-right: 40px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 16px; outline: none; }
         input:focus { border-color: #3ecf8e; box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.2); }
-        
-        /* Toggle Visibility Button Style */
         .toggle-btn { position: absolute; right: 12px; top: 34px; background: none; border: none; cursor: pointer; font-size: 16px; padding: 0; color: #6b7280; outline: none; }
-        
         button.submit { width: 100%; padding: 12px; background-color: #3ecf8e; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 15px; transition: background 0.2s; }
         button.submit:hover { background-color: #2e9d6b; }
         button.submit:disabled { background-color: #9ca3af; cursor: not-allowed; }
-        
         .message { margin-top: 15px; font-size: 14px; display: none; padding: 10px; border-radius: 6px; }
         .success { color: #15803d; background-color: #f0fdf4; border: 1px solid #bbf7d0; }
         .error { color: #b91c1c; background-color: #fef2f2; border: 1px solid #fecaca; }
+        .loading-status { font-size: 13px; color: #6b7280; margin-bottom: 15px; font-style: italic; }
     </style>
 </head>
 <body>
@@ -36,55 +30,58 @@
     <h2>New Password</h2>
     <p>Please enter and confirm your new secure password below.</p>
     
+    <div id="connection-status" class="loading-status">Connecting secure session with Supabase...</div>
+
     <div class="input-wrapper">
         <label for="new-password">New Password</label>
-        <input type="password" id="new-password" placeholder="Min. 6 characters" required />
-        <button type="button" class="toggle-btn" onclick="toggleVisibility('new-password', this)">👁️</button>
+        <input type="password" id="new-password" placeholder="Min. 6 characters" required disabled />
     </div>
 
     <div class="input-wrapper">
         <label for="confirm-password">Confirm Password</label>
-        <input type="password" id="confirm-password" placeholder="Re-enter password" required />
-        <button type="button" class="toggle-btn" onclick="toggleVisibility('confirm-password', this)">👁️</button>
+        <input type="password" id="confirm-password" placeholder="Re-enter password" required disabled />
     </div>
 
-    <button id="submit-btn" class="submit" onclick="handlePasswordReset()">Update Password</button>
+    <button id="submit-btn" class="submit" onclick="handlePasswordReset()" disabled>Update Password</button>
     
     <div id="msg" class="message"></div>
 </div>
 
 <script>
-    // 1. CONNECT TO YOUR SUPABASE
-    const SUPABASE_URL = "https://cvsvgufcupscsyalgnvl.supabase.co"; 
-    const SUPABASE_ANON_KEY = "sb_publishable_rW_g0Diq0QXbMcbeahxS6g_3R-_PEEB";
-    
-    let supabaseClient;
-    try {
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        // 🔥 CRITICAL FIX FOR PKCE FLOW (?code=...)
-        // Yeh block URL se '?code=' ko uthayega aur browser mein session set karega
-        supabaseClient.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN') {
-                console.log("Session successfully established via PKCE code!");
+    // 1. INITIALIZE SUPABASE
+    const SUPABASE_URL = "YOUR_SUPABASE_URL"; 
+    const SUPABASE_ANON_KEY = "YOUR_YOUR_SUPABASE_ANON_KEY";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 2. AUTO RUN ON PAGE LOAD: Catch the Code and Exchange Session
+    window.addEventListener('DOMContentLoaded', async () => {
+        const statusDiv = document.getElementById('connection-status');
+        const passwordFields = [document.getElementById('new-password'), document.getElementById('confirm-password')];
+        const submitBtn = document.getElementById('submit-btn');
+
+        // Thoda wait karte hain taake SDK load ho jaye aur URL parse kare
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        try {
+            const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+            
+            if (sessionError || !sessionData || !sessionData.session) {
+                statusDiv.innerText = "❌ Session verification failed. Link may be expired.";
+                statusDiv.style.color = "#b91c1c";
+                showMsg("Secure link expired or invalid. Please request a new link from the mobile app.", "error");
+            } else {
+                statusDiv.innerText = "✅ Secure connection established! You can now type your password.";
+                statusDiv.style.color = "#15803d";
+                
+                // Enable input fields and button
+                passwordFields.forEach(field => field.disabled = false);
+                submitBtn.disabled = false;
             }
-        });
-
-    } catch (err) {
-        console.error("Supabase Initialization Error:", err);
-    }
-
-    // 2. OBSCURE TOGGLE FUNCTION
-    function toggleVisibility(fieldId, btn) {
-        const inputField = document.getElementById(fieldId);
-        if (inputField.type === "password") {
-            inputField.type = "text";
-            btn.innerText = "🙈";
-        } else {
-            inputField.type = "password";
-            btn.innerText = "👁️";
+        } catch (err) {
+            statusDiv.innerText = "❌ Connection Error.";
+            console.error(err);
         }
-    }
+    });
 
     // 3. PASSWORD RESET FUNCTION
     async function handlePasswordReset() {
@@ -102,33 +99,17 @@
             return;
         }
 
-        if (!supabaseClient) {
-            showMsg("Supabase client not initialized.", "error");
-            return;
-        }
-
         submitBtn.innerText = "Updating...";
         submitBtn.disabled = true;
 
         try {
-            // Check session safely (ab yeh session detect kar lega)
-            const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-            
-            if (sessionError || !sessionData || !sessionData.session) {
-                showMsg("Auth session missing! Please click the link from your email again.", "error");
-                submitBtn.innerText = "Update Password";
-                submitBtn.disabled = false;
-                return;
-            }
-
-            // Update user password
             const { data, error } = await supabaseClient.auth.updateUser({
                 password: passwordInput
             });
 
             if (error) throw error;
 
-            showMsg("Password updated successfully! You can now log into the mobile app.", "success");
+            showMsg("Password updated successfully! open MendAI app to login.", "success");
             submitBtn.innerText = "Updated ✅";
 
         } catch (error) {
@@ -145,3 +126,6 @@
         msgDiv.style.display = 'block';
     }
 </script>
+
+</body>
+</html>
