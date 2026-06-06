@@ -21,28 +21,27 @@
         .message { margin-top: 15px; font-size: 14px; display: none; padding: 10px; border-radius: 6px; }
         .success { color: #15803d; background-color: #f0fdf4; border: 1px solid #bbf7d0; }
         .error { color: #b91c1c; background-color: #fef2f2; border: 1px solid #fecaca; }
-        .loading-status { font-size: 13px; color: #6b7280; margin-bottom: 15px; font-style: italic; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <h2>New Password</h2>
-    <p>Please enter and confirm your new secure password below.</p>
+    <p id="status-text">Connecting to authentication server...</p>
     
-    <div id="connection-status" class="loading-status">Connecting secure session with Supabase...</div>
-
     <div class="input-wrapper">
         <label for="new-password">New Password</label>
         <input type="password" id="new-password" placeholder="Min. 6 characters" required disabled />
+        <button type="button" class="toggle-btn" onclick="toggleVisibility('new-password', this)">👁️</button>
     </div>
 
     <div class="input-wrapper">
         <label for="confirm-password">Confirm Password</label>
         <input type="password" id="confirm-password" placeholder="Re-enter password" required disabled />
+        <button type="button" class="toggle-btn" onclick="toggleVisibility('confirm-password', this)">👁️</button>
     </div>
 
-    <button id="submit-btn" class="submit" onclick="handlePasswordReset()" disabled>Update Password</button>
+    <button id="submit-btn" class="submit" onclick="handlePasswordReset()" disabled>Please Wait...</button>
     
     <div id="msg" class="message"></div>
 </div>
@@ -50,40 +49,51 @@
 <script>
     // 1. INITIALIZE SUPABASE
     const SUPABASE_URL = "YOUR_SUPABASE_URL"; 
-    const SUPABASE_ANON_KEY = "YOUR_YOUR_SUPABASE_ANON_KEY";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 2. AUTO RUN ON PAGE LOAD: Catch the Code and Exchange Session
-    window.addEventListener('DOMContentLoaded', async () => {
-        const statusDiv = document.getElementById('connection-status');
-        const passwordFields = [document.getElementById('new-password'), document.getElementById('confirm-password')];
+    // 2. LISTEN FOR AUTH STATE CHANGES (PKCE Code Exchange handling)
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        const statusText = document.getElementById('status-text');
         const submitBtn = document.getElementById('submit-btn');
+        const pass1 = document.getElementById('new-password');
+        const pass2 = document.getElementById('confirm-password');
 
-        // Thoda wait karte hain taake SDK load ho jaye aur URL parse kare
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        try {
-            const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+        if (session) {
+            // Jaise hi token exchange ho jaye, form unlock kardo
+            statusText.innerText = "Please enter and confirm your new secure password below.";
+            statusText.style.color = "#6b7280";
             
-            if (sessionError || !sessionData || !sessionData.session) {
-                statusDiv.innerText = "❌ Session verification failed. Link may be expired.";
-                statusDiv.style.color = "#b91c1c";
-                showMsg("Secure link expired or invalid. Please request a new link from the mobile app.", "error");
-            } else {
-                statusDiv.innerText = "✅ Secure connection established! You can now type your password.";
-                statusDiv.style.color = "#15803d";
-                
-                // Enable input fields and button
-                passwordFields.forEach(field => field.disabled = false);
-                submitBtn.disabled = false;
-            }
-        } catch (err) {
-            statusDiv.innerText = "❌ Connection Error.";
-            console.error(err);
+            pass1.disabled = false;
+            pass2.disabled = false;
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Update Password";
+        } else {
+            statusText.innerText = "Verifying link... Please wait.";
+            // Agar 5 seconds tak session na aaye, iska matlab link invalid ya expired hai
+            setTimeout(async () => {
+                const { data } = await supabaseClient.auth.getSession();
+                if (!data.session) {
+                    showMsg("Authentication link expired or invalid! Please request a new link from the mobile app.", "error");
+                    statusText.innerText = "Link verification failed.";
+                }
+            }, 5000);
         }
     });
 
-    // 3. PASSWORD RESET FUNCTION
+    // OBSCURE TOGGLE FUNCTION
+    function toggleVisibility(fieldId, btn) {
+        const inputField = document.getElementById(fieldId);
+        if (inputField.type === "password") {
+            inputField.type = "text";
+            btn.innerText = "🙈";
+        } else {
+            inputField.type = "password";
+            btn.innerText = "👁️";
+        }
+    }
+
+    // PASSWORD RESET FUNCTION
     async function handlePasswordReset() {
         const passwordInput = document.getElementById('new-password').value;
         const confirmInput = document.getElementById('confirm-password').value;
@@ -103,13 +113,14 @@
         submitBtn.disabled = true;
 
         try {
+            // Update user password directly (since session is guaranteed by onAuthStateChange)
             const { data, error } = await supabaseClient.auth.updateUser({
                 password: passwordInput
             });
 
             if (error) throw error;
 
-            showMsg("Password updated successfully! open MendAI app to login.", "success");
+            showMsg("Password updated successfully! You can now log into the mobile app.", "success");
             submitBtn.innerText = "Updated ✅";
 
         } catch (error) {
