@@ -57,40 +57,53 @@
     // 1. CONNECT TO YOUR SUPABASE
     const SUPABASE_URL = "https://cvsvgufcupscsyalgnvl.supabase.co"; 
     const SUPABASE_ANON_KEY = "sb_publishable_rW_g0Diq0QXbMcbeahxS6g_3R-_PEEB";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    let supabaseClient;
+    try {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // 🔥 CRITICAL FIX FOR PKCE FLOW (?code=...)
+        // Yeh block URL se '?code=' ko uthayega aur browser mein session set karega
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') {
+                console.log("Session successfully established via PKCE code!");
+            }
+        });
 
-    // 2. OBSCURE / UNBOBSCURE TOGGLE FUNCTION
+    } catch (err) {
+        console.error("Supabase Initialization Error:", err);
+    }
+
+    // 2. OBSCURE TOGGLE FUNCTION
     function toggleVisibility(fieldId, btn) {
         const inputField = document.getElementById(fieldId);
         if (inputField.type === "password") {
             inputField.type = "text";
-            btn.innerText = "🙈"; // Change icon to blind/hidden
+            btn.innerText = "🙈";
         } else {
             inputField.type = "password";
-            btn.innerText = "👁️"; // Change icon back to visible
+            btn.innerText = "👁️";
         }
     }
 
-async function handlePasswordReset() {
+    // 3. PASSWORD RESET FUNCTION
+    async function handlePasswordReset() {
         const passwordInput = document.getElementById('new-password').value;
         const confirmInput = document.getElementById('confirm-password').value;
         const submitBtn = document.getElementById('submit-btn');
 
-        // 1. Pehle validation check karein
         if (!passwordInput || passwordInput.length < 6) {
             showMsg("Password must be at least 6 characters long.", "error");
             return;
         }
+
         if (passwordInput !== confirmInput) {
             showMsg("Passwords do not match. Please check again.", "error");
             return;
         }
 
-        // 2. CRITICAL: Check karein ke kya browser mein session aa chuka hai?
-        const { data: sessionData } = await supabaseClient.auth.getSession();
-        
-        if (!sessionData.session) {
-            showMsg("Auth session missing! Please click the link from your email again. The link might be expired.", "error");
+        if (!supabaseClient) {
+            showMsg("Supabase client not initialized.", "error");
             return;
         }
 
@@ -98,6 +111,17 @@ async function handlePasswordReset() {
         submitBtn.disabled = true;
 
         try {
+            // Check session safely (ab yeh session detect kar lega)
+            const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+            
+            if (sessionError || !sessionData || !sessionData.session) {
+                showMsg("Auth session missing! Please click the link from your email again.", "error");
+                submitBtn.innerText = "Update Password";
+                submitBtn.disabled = false;
+                return;
+            }
+
+            // Update user password
             const { data, error } = await supabaseClient.auth.updateUser({
                 password: passwordInput
             });
@@ -114,7 +138,6 @@ async function handlePasswordReset() {
         }
     }
 
-    // 4. SHOW MESSAGE FUNCTION (Yeh bhi aise hi niche rahega)
     function showMsg(text, type) {
         const msgDiv = document.getElementById('msg');
         msgDiv.innerText = text;
@@ -122,6 +145,3 @@ async function handlePasswordReset() {
         msgDiv.style.display = 'block';
     }
 </script>
-
-</body>
-</html>
