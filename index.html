@@ -27,7 +27,7 @@
 
 <div class="card">
     <h2>New Password</h2>
-    <p id="status-text">Connecting to authentication server...</p>
+    <p id="status-text">Verifying your authentication link...</p>
     
     <div class="input-wrapper">
         <label for="new-password">New Password</label>
@@ -50,34 +50,56 @@
     // 1. INITIALIZE SUPABASE
     const SUPABASE_URL = "YOUR_SUPABASE_URL"; 
     const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+            flowType: 'pkce' // Force standard PKCE flow for static pages
+        }
+    });
 
-    // 2. LISTEN FOR AUTH STATE CHANGES (PKCE Code Exchange handling)
-    supabaseClient.auth.onAuthStateChange((event, session) => {
+    // 2. RUN IMMEDIATELY ON PAGE LOAD
+    window.addEventListener('DOMContentLoaded', async () => {
         const statusText = document.getElementById('status-text');
         const submitBtn = document.getElementById('submit-btn');
         const pass1 = document.getElementById('new-password');
         const pass2 = document.getElementById('confirm-password');
 
-        if (session) {
-            // Jaise hi token exchange ho jaye, form unlock kardo
-            statusText.innerText = "Please enter and confirm your new secure password below.";
-            statusText.style.color = "#6b7280";
-            
-            pass1.disabled = false;
-            pass2.disabled = false;
-            submitBtn.disabled = false;
-            submitBtn.innerText = "Update Password";
+        // URL se ?code=... param nikalne ke liye
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+
+        if (code) {
+            try {
+                // PKCE Code ko manually exchange kar ke session active kar rahe hain
+                const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
+                
+                if (error) throw error;
+
+                // Session mil gaya! Input fields unlock kar do
+                statusText.innerText = "Link verified successfully. Enter your new password.";
+                statusText.style.color = "#6b7280";
+                pass1.disabled = false;
+                pass2.disabled = false;
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Update Password";
+
+            } catch (err) {
+                console.error(err);
+                showMsg("Invalid or Expired Link! Please request a new password reset email.", "error");
+                statusText.innerText = "Link verification failed.";
+            }
         } else {
-            statusText.innerText = "Verifying link... Please wait.";
-            // Agar 5 seconds tak session na aaye, iska matlab link invalid ya expired hai
-            setTimeout(async () => {
-                const { data } = await supabaseClient.auth.getSession();
-                if (!data.session) {
-                    showMsg("Authentication link expired or invalid! Please request a new link from the mobile app.", "error");
-                    statusText.innerText = "Link verification failed.";
-                }
-            }, 5000);
+            // Agar link direct khola jaye bina code ke, toh check karein pehle se active session hai ya nahi
+            const { data } = await supabaseClient.auth.getSession();
+            if (data && data.session) {
+                statusText.innerText = "Enter your new secure password below.";
+                pass1.disabled = false;
+                pass2.disabled = false;
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Update Password";
+            } else {
+                showMsg("No authentication code found in the link. Please open this page via the email link.", "error");
+                statusText.innerText = "Access Denied.";
+            }
         }
     });
 
@@ -113,7 +135,6 @@
         submitBtn.disabled = true;
 
         try {
-            // Update user password directly (since session is guaranteed by onAuthStateChange)
             const { data, error } = await supabaseClient.auth.updateUser({
                 password: passwordInput
             });
