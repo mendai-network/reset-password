@@ -47,12 +47,14 @@
 </div>
 
 <script>
-    // 1. INITIALIZE SUPABASE
+    // 1. INITIALIZE SUPABASE WITHOUT STORAGE CONFLICTS
     const SUPABASE_URL = "YOUR_SUPABASE_URL"; 
     const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
-            flowType: 'pkce' // Force standard PKCE flow for static pages
+            persistSession: false, // Prevents GitHub Pages localStorage blocking errors
+            autoRefreshToken: false
         }
     });
 
@@ -63,43 +65,32 @@
         const pass1 = document.getElementById('new-password');
         const pass2 = document.getElementById('confirm-password');
 
-        // URL se ?code=... param nikalne ke liye
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
 
         if (code) {
             try {
-                // PKCE Code ko manually exchange kar ke session active kar rahe hain
+                // Exchange code for active single-use session token
                 const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
                 
                 if (error) throw error;
 
-                // Session mil gaya! Input fields unlock kar do
+                // Lock elements unlock successfully!
                 statusText.innerText = "Link verified successfully. Enter your new password.";
-                statusText.style.color = "#6b7280";
+                statusText.style.color = "#4b5563";
                 pass1.disabled = false;
                 pass2.disabled = false;
                 submitBtn.disabled = false;
                 submitBtn.innerText = "Update Password";
 
             } catch (err) {
-                console.error(err);
-                showMsg("Invalid or Expired Link! Please request a new password reset email.", "error");
-                statusText.innerText = "Link verification failed.";
+                console.error("Exchange Error: ", err);
+                showMsg("Verification failed! The link might be expired or used. Please request a new link from the mobile app.", "error");
+                statusText.innerText = "Link validation failed.";
             }
         } else {
-            // Agar link direct khola jaye bina code ke, toh check karein pehle se active session hai ya nahi
-            const { data } = await supabaseClient.auth.getSession();
-            if (data && data.session) {
-                statusText.innerText = "Enter your new secure password below.";
-                pass1.disabled = false;
-                pass2.disabled = false;
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Update Password";
-            } else {
-                showMsg("No authentication code found in the link. Please open this page via the email link.", "error");
-                statusText.innerText = "Access Denied.";
-            }
+            showMsg("No authentication code found. Please open this page via the email link.", "error");
+            statusText.innerText = "Access Denied.";
         }
     });
 
@@ -135,6 +126,7 @@
         submitBtn.disabled = true;
 
         try {
+            // Update user password directly inside the active exchange session context
             const { data, error } = await supabaseClient.auth.updateUser({
                 password: passwordInput
             });
@@ -145,7 +137,7 @@
             submitBtn.innerText = "Updated ✅";
 
         } catch (error) {
-            showMsg(error.message || "An error occurred.", "error");
+            showMsg(error.message || "An error occurred during update.", "error");
             submitBtn.innerText = "Update Password";
             submitBtn.disabled = false;
         }
