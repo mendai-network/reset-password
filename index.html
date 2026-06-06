@@ -1,155 +1,372 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Your Password - MendAI</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f3f4f6; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 360px; text-align: center; }
-        h2 { color: #1f2937; margin-bottom: 10px; font-size: 24px; }
-        p { color: #6b7280; font-size: 14px; margin-bottom: 20px; }
-        .input-wrapper { position: relative; margin: 12px 0; text-align: left; }
-        label { font-size: 13px; color: #4b5563; font-weight: 500; display: block; margin-bottom: 4px; }
-        input { width: 100%; padding: 12px; padding-right: 40px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 16px; outline: none; }
-        input:focus { border-color: #3ecf8e; box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.2); }
-        .toggle-btn { position: absolute; right: 12px; top: 34px; background: none; border: none; cursor: pointer; font-size: 16px; padding: 0; color: #6b7280; outline: none; }
-        button.submit { width: 100%; padding: 12px; background-color: #3ecf8e; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 15px; transition: background 0.2s; }
-        button.submit:hover { background-color: #2e9d6b; }
-        button.submit:disabled { background-color: #9ca3af; cursor: not-allowed; }
-        .message { margin-top: 15px; font-size: 14px; display: none; padding: 10px; border-radius: 6px; }
-        .success { color: #15803d; background-color: #f0fdf4; border: 1px solid #bbf7d0; }
-        .error { color: #b91c1c; background-color: #fef2f2; border: 1px solid #fecaca; }
-    </style>
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset Your Password - MendAI</title>
 
-<div class="card">
-    <h2>New Password</h2>
-    <p id="status-text">Verifying your authentication link...</p>
-    
-    <div class="input-wrapper">
-        <label for="new-password">New Password</label>
-        <input type="password" id="new-password" placeholder="Min. 6 characters" required disabled />
-        <button type="button" class="toggle-btn" onclick="toggleVisibility('new-password', this)">👁️</button>
-    </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <div class="input-wrapper">
-        <label for="confirm-password">Confirm Password</label>
-        <input type="password" id="confirm-password" placeholder="Re-enter password" required disabled />
-        <button type="button" class="toggle-btn" onclick="toggleVisibility('confirm-password', this)">👁️</button>
-    </div>
-
-    <button id="submit-btn" class="submit" onclick="handlePasswordReset()" disabled>Please Wait...</button>
-    
-    <div id="msg" class="message"></div>
-</div>
-
-<script>
-    // 1. INITIALIZE SUPABASE WITHOUT STORAGE CONFLICTS
-    const SUPABASE_URL = "https://cvsvgufcupscsyalgnvl.supabase.co"; 
-    const SUPABASE_ANON_KEY = "sb_publishable_rW_g0Diq0QXbMcbeahxS6g_3R-_PEEB";
-    
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-            persistSession: false, // Prevents GitHub Pages localStorage blocking errors
-            autoRefreshToken: false
-        }
-    });
-
-    // 2. RUN IMMEDIATELY ON PAGE LOAD
-    window.addEventListener('DOMContentLoaded', async () => {
-        const statusText = document.getElementById('status-text');
-        const submitBtn = document.getElementById('submit-btn');
-        const pass1 = document.getElementById('new-password');
-        const pass2 = document.getElementById('confirm-password');
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-
-        if (code) {
-            try {
-                // Exchange code for active single-use session token
-                const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
-                
-                if (error) throw error;
-
-                // Lock elements unlock successfully!
-                statusText.innerText = "Link verified successfully. Enter your new password.";
-                statusText.style.color = "#4b5563";
-                pass1.disabled = false;
-                pass2.disabled = false;
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Update Password";
-
-            } catch (err) {
-                console.error("Exchange Error: ", err);
-                showMsg("Verification failed! The link might be expired or used. Please request a new link from the mobile app.", "error");
-                statusText.innerText = "Link validation failed.";
-            }
-        } else {
-            showMsg("No authentication code found. Please open this page via the email link.", "error");
-            statusText.innerText = "Access Denied.";
-        }
-    });
-
-    // OBSCURE TOGGLE FUNCTION
-    function toggleVisibility(fieldId, btn) {
-        const inputField = document.getElementById(fieldId);
-        if (inputField.type === "password") {
-            inputField.type = "text";
-            btn.innerText = "🙈";
-        } else {
-            inputField.type = "password";
-            btn.innerText = "👁️";
-        }
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f3f4f6;
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
     }
 
-    // PASSWORD RESET FUNCTION
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+
+    h2 {
+      color: #1f2937;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    p {
+      color: #6b7280;
+      font-size: 14px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .input-wrapper {
+      position: relative;
+      margin: 12px 0;
+      text-align: left;
+    }
+
+    label {
+      font-size: 13px;
+      color: #4b5563;
+      font-weight: 500;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      padding-right: 42px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 16px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #3ecf8e;
+      box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.2);
+    }
+
+    input:disabled {
+      background-color: #f9fafb;
+      cursor: not-allowed;
+    }
+
+    .toggle-btn {
+      position: absolute;
+      right: 12px;
+      top: 34px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+      color: #6b7280;
+      outline: none;
+    }
+
+    button.submit {
+      width: 100%;
+      padding: 12px;
+      background-color: #3ecf8e;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: background 0.2s;
+    }
+
+    button.submit:hover {
+      background-color: #2e9d6b;
+    }
+
+    button.submit:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .message {
+      margin-top: 15px;
+      font-size: 14px;
+      display: none;
+      padding: 10px;
+      border-radius: 6px;
+      line-height: 1.4;
+    }
+
+    .success {
+      color: #15803d;
+      background-color: #f0fdf4;
+      border: 1px solid #bbf7d0;
+    }
+
+    .error {
+      color: #b91c1c;
+      background-color: #fef2f2;
+      border: 1px solid #fecaca;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h2>New Password</h2>
+    <p id="status-text">Verifying your password reset link...</p>
+
+    <div class="input-wrapper">
+      <label for="new-password">New Password</label>
+      <input type="password" id="new-password" placeholder="Min. 6 characters" disabled />
+      <button type="button" class="toggle-btn" onclick="toggleVisibility('new-password', this)">👁️</button>
+    </div>
+
+    <div class="input-wrapper">
+      <label for="confirm-password">Confirm Password</label>
+      <input type="password" id="confirm-password" placeholder="Re-enter password" disabled />
+      <button type="button" class="toggle-btn" onclick="toggleVisibility('confirm-password', this)">👁️</button>
+    </div>
+
+    <button id="submit-btn" class="submit" onclick="handlePasswordReset()" disabled>
+      Please Wait...
+    </button>
+
+    <div id="msg" class="message"></div>
+  </div>
+
+  <script>
+    /*
+      IMPORTANT:
+      Replace these two values with your real Supabase project values.
+
+      SUPABASE_URL example:
+      https://abcxyz.supabase.co
+
+      SUPABASE_ANON_KEY:
+      Project Settings > API > anon public key
+    */
+
+    const SUPABASE_URL = "https://cvsvgufcupscsyalgnvl.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_rW_g0Diq0QXbMcbeahxS6g_3R-_PEEB";
+
+    const supabaseClient = supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      }
+    );
+
+    const statusText = document.getElementById("status-text");
+    const submitBtn = document.getElementById("submit-btn");
+    const pass1 = document.getElementById("new-password");
+    const pass2 = document.getElementById("confirm-password");
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      await verifyResetLink();
+    });
+
+    async function verifyResetLink() {
+      try {
+        showMsg("", "");
+
+        const queryParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace("#", ""));
+
+        const code = queryParams.get("code");
+
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        const type = hashParams.get("type");
+
+        /*
+          Case 1:
+          Supabase PKCE link:
+          https://your-page.com/?code=xxxx
+        */
+        if (code) {
+          const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
+
+          if (error) {
+            throw error;
+          }
+
+          if (!data || !data.session) {
+            throw new Error("Session was not created from the reset link.");
+          }
+
+          enablePasswordForm();
+          return;
+        }
+
+        /*
+          Case 2:
+          Supabase implicit recovery link:
+          https://your-page.com/#access_token=xxx&refresh_token=xxx&type=recovery
+        */
+        if (accessToken && refreshToken) {
+          const { data, error } = await supabaseClient.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+
+          if (error) {
+            throw error;
+          }
+
+          if (!data || !data.session) {
+            throw new Error("Session was not created from recovery tokens.");
+          }
+
+          enablePasswordForm();
+          return;
+        }
+
+        /*
+          If neither code nor tokens exist.
+        */
+        throw new Error("No valid password reset token found in the URL.");
+
+      } catch (error) {
+        console.error("Reset link verification error:", error);
+
+        statusText.innerText = "Reset link validation failed.";
+        showMsg(
+          "Verification failed. The link may be expired, already used, or opened incorrectly. Please request a new password reset link from the mobile app.",
+          "error"
+        );
+
+        disablePasswordForm();
+      }
+    }
+
+    function enablePasswordForm() {
+      statusText.innerText = "Link verified successfully. Please enter your new password.";
+      statusText.style.color = "#4b5563";
+
+      pass1.disabled = false;
+      pass2.disabled = false;
+      submitBtn.disabled = false;
+      submitBtn.innerText = "Update Password";
+    }
+
+    function disablePasswordForm() {
+      pass1.disabled = true;
+      pass2.disabled = true;
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Link Invalid";
+    }
+
+    function toggleVisibility(fieldId, btn) {
+      const inputField = document.getElementById(fieldId);
+
+      if (inputField.type === "password") {
+        inputField.type = "text";
+        btn.innerText = "🙈";
+      } else {
+        inputField.type = "password";
+        btn.innerText = "👁️";
+      }
+    }
+
     async function handlePasswordReset() {
-        const passwordInput = document.getElementById('new-password').value;
-        const confirmInput = document.getElementById('confirm-password').value;
-        const submitBtn = document.getElementById('submit-btn');
+      const passwordInput = pass1.value.trim();
+      const confirmInput = pass2.value.trim();
 
-        if (!passwordInput || passwordInput.length < 6) {
-            showMsg("Password must be at least 6 characters long.", "error");
-            return;
+      if (!passwordInput || passwordInput.length < 6) {
+        showMsg("Password must be at least 6 characters long.", "error");
+        return;
+      }
+
+      if (passwordInput !== confirmInput) {
+        showMsg("Passwords do not match. Please check again.", "error");
+        return;
+      }
+
+      submitBtn.innerText = "Updating...";
+      submitBtn.disabled = true;
+
+      try {
+        const { data, error } = await supabaseClient.auth.updateUser({
+          password: passwordInput
+        });
+
+        if (error) {
+          throw error;
         }
 
-        if (passwordInput !== confirmInput) {
-            showMsg("Passwords do not match. Please check again.", "error");
-            return;
-        }
+        showMsg("Password updated successfully. You can now log in to the mobile app.", "success");
 
-        submitBtn.innerText = "Updating...";
-        submitBtn.disabled = true;
+        statusText.innerText = "Password reset completed.";
+        submitBtn.innerText = "Updated ✅";
 
-        try {
-            // Update user password directly inside the active exchange session context
-            const { data, error } = await supabaseClient.auth.updateUser({
-                password: passwordInput
-            });
+        pass1.disabled = true;
+        pass2.disabled = true;
 
-            if (error) throw error;
+        /*
+          Optional:
+          Sign out from this browser page after password update.
+          This keeps the reset page clean.
+        */
+        setTimeout(async () => {
+          await supabaseClient.auth.signOut();
+        }, 1000);
 
-            showMsg("Password updated successfully! You can now log into the mobile app.", "success");
-            submitBtn.innerText = "Updated ✅";
+      } catch (error) {
+        console.error("Password update error:", error);
 
-        } catch (error) {
-            showMsg(error.message || "An error occurred during update.", "error");
-            submitBtn.innerText = "Update Password";
-            submitBtn.disabled = false;
-        }
+        showMsg(error.message || "Password update failed. Please try again.", "error");
+
+        submitBtn.innerText = "Update Password";
+        submitBtn.disabled = false;
+      }
     }
 
     function showMsg(text, type) {
-        const msgDiv = document.getElementById('msg');
-        msgDiv.innerText = text;
-        msgDiv.className = `message ${type}`;
-        msgDiv.style.display = 'block';
+      const msgDiv = document.getElementById("msg");
+
+      if (!text) {
+        msgDiv.style.display = "none";
+        return;
+      }
+
+      msgDiv.innerText = text;
+      msgDiv.className = "message " + type;
+      msgDiv.style.display = "block";
     }
-</script>
+  </script>
 
 </body>
 </html>
