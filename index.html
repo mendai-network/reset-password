@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your Password - MendAI</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f3f4f6; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 360px; text-align: center; }
+        h2 { color: #1f2937; margin-bottom: 10px; font-size: 24px; }
+        p { color: #6b7280; font-size: 14px; margin-bottom: 20px; }
+        
+        /* Wrapper to contain input and eye button */
+        .input-wrapper { position: relative; margin: 12px 0; text-align: left; }
+        label { font-size: 13px; color: #4b5563; font-weight: 500; display: block; margin-bottom: 4px; }
+        
+        input { width: 100%; padding: 12px; padding-right: 40px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 16px; outline: none; }
+        input:focus { border-color: #3ecf8e; box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.2); }
+        
+        /* Toggle Visibility Button Style */
+        .toggle-btn { position: absolute; right: 12px; top: 34px; background: none; border: none; cursor: pointer; font-size: 16px; padding: 0; color: #6b7280; outline: none; }
+        
+        button.submit { width: 100%; padding: 12px; background-color: #3ecf8e; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 15px; transition: background 0.2s; }
+        button.submit:hover { background-color: #2e9d6b; }
+        button.submit:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        
+        .message { margin-top: 15px; font-size: 14px; display: none; padding: 10px; border-radius: 6px; }
+        .success { color: #15803d; background-color: #f0fdf4; border: 1px solid #bbf7d0; }
+        .error { color: #b91c1c; background-color: #fef2f2; border: 1px solid #fecaca; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>New Password</h2>
+    <p>Please enter and confirm your new secure password below.</p>
+    
+    <div class="input-wrapper">
+        <label for="new-password">New Password</label>
+        <input type="password" id="new-password" placeholder="Min. 6 characters" required />
+        <button type="button" class="toggle-btn" onclick="toggleVisibility('new-password', this)">👁️</button>
+    </div>
+
+    <div class="input-wrapper">
+        <label for="confirm-password">Confirm Password</label>
+        <input type="password" id="confirm-password" placeholder="Re-enter password" required />
+        <button type="button" class="toggle-btn" onclick="toggleVisibility('confirm-password', this)">👁️</button>
+    </div>
+
+    <button id="submit-btn" class="submit" onclick="handlePasswordReset()">Update Password</button>
+    
+    <div id="msg" class="message"></div>
+</div>
+
+<script>
+    // 1. CONNECT TO YOUR SUPABASE
+    const SUPABASE_URL = "YOUR_SUPABASE_URL"; 
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 2. OBSCURE / UNBOBSCURE TOGGLE FUNCTION
+    function toggleVisibility(fieldId, btn) {
+        const inputField = document.getElementById(fieldId);
+        if (inputField.type === "password") {
+            inputField.type = "text";
+            btn.innerText = "🙈"; // Change icon to blind/hidden
+        } else {
+            inputField.type = "password";
+            btn.innerText = "👁️"; // Change icon back to visible
+        }
+    }
+
+    // 3. UPDATE PASSWORD FUNCTION WITH CONFIRMATION CHECK
+    async function handlePasswordReset() {
+        const passwordInput = document.getElementById('new-password').value;
+        const confirmInput = document.getElementById('confirm-password').value;
+        const submitBtn = document.getElementById('submit-btn');
+
+        // Validation 1: Length Check
+        if (!passwordInput || passwordInput.length < 6) {
+            showMsg("Password must be at least 6 characters long.", "error");
+            return;
+        }
+
+        // Validation 2: Match Check
+        if (passwordInput !== confirmInput) {
+            showMsg("Passwords do not match. Please check again.", "error");
+            return;
+        }
+
+        submitBtn.innerText = "Updating...";
+        submitBtn.disabled = true;
+
+        try {
+            // Processing updates on Supabase backend
+            const { data, error } = await supabaseClient.auth.updateUser({
+                password: passwordInput
+            });
+
+            if (error) throw error;
+
+            showMsg("Password updated successfully! You can now log into the mobile app.", "success");
+            submitBtn.innerText = "Updated ✅";
+
+        } catch (error) {
+            showMsg(error.message || "An error occurred.", "error");
+            submitBtn.innerText = "Update Password";
+            submitBtn.disabled = false;
+        }
+    }
+
+    function showMsg(text, type) {
+        const msgDiv = document.getElementById('msg');
+        msgDiv.innerText = text;
+        msgDiv.className = `message ${type}`;
+        msgDiv.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
