@@ -12,8 +12,10 @@
     body {
       font-family: Arial, sans-serif;
       background: #f3f4f6;
-      height: 100vh;
+      min-height: 100vh;
       margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -21,23 +23,25 @@
 
     .card {
       background: white;
-      width: 90%;
-      max-width: 380px;
+      width: 100%;
+      max-width: 390px;
       padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      border-radius: 14px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.10);
       text-align: center;
     }
 
     h2 {
-      margin-bottom: 10px;
+      margin: 0 0 10px;
       color: #111827;
+      font-size: 24px;
     }
 
     p {
       color: #6b7280;
       font-size: 14px;
       line-height: 1.5;
+      margin-bottom: 20px;
     }
 
     .input-box {
@@ -57,17 +61,17 @@
     input {
       width: 100%;
       padding: 12px;
-      padding-right: 40px;
+      padding-right: 42px;
       font-size: 15px;
       border: 1px solid #d1d5db;
-      border-radius: 6px;
+      border-radius: 7px;
       box-sizing: border-box;
     }
 
     input:focus {
       outline: none;
       border-color: #3ecf8e;
-      box-shadow: 0 0 0 2px rgba(62,207,142,0.2);
+      box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.20);
     }
 
     input:disabled {
@@ -94,8 +98,12 @@
       color: white;
       font-size: 16px;
       font-weight: bold;
-      border-radius: 6px;
+      border-radius: 7px;
       cursor: pointer;
+    }
+
+    .submit:hover {
+      background: #2e9d6b;
     }
 
     .submit:disabled {
@@ -107,9 +115,10 @@
       display: none;
       margin-top: 15px;
       padding: 10px;
-      border-radius: 6px;
+      border-radius: 7px;
       font-size: 14px;
       line-height: 1.4;
+      word-break: break-word;
     }
 
     .success {
@@ -136,13 +145,13 @@
     <p id="statusText">Checking your reset link...</p>
 
     <div class="input-box">
-      <label>New Password</label>
+      <label for="newPassword">New Password</label>
       <input type="password" id="newPassword" placeholder="Enter new password" disabled />
       <button class="eye" type="button" onclick="togglePassword('newPassword', this)">👁️</button>
     </div>
 
     <div class="input-box">
-      <label>Confirm Password</label>
+      <label for="confirmPassword">Confirm Password</label>
       <input type="password" id="confirmPassword" placeholder="Confirm new password" disabled />
       <button class="eye" type="button" onclick="togglePassword('confirmPassword', this)">👁️</button>
     </div>
@@ -156,17 +165,18 @@
 
   <script>
     /*
-      YAHAN APNI SUPABASE DETAILS LAGANI HAIN
+      IMPORTANT:
+      Yahan apni Supabase project details lagani hain.
     */
 
-    const SUPABASE_URL = "https://cvsvgufcupscsyalgnvl.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_rW_g0Diq0QXbMcbeahxS6g_3R-_PEEB";
+    const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: false
       }
     });
 
@@ -182,37 +192,35 @@
 
     async function checkResetLink() {
       try {
+        hideMessage();
+
         const queryParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
-        const code = queryParams.get("code");
+        const tokenHash = queryParams.get("token_hash");
+        const type = queryParams.get("type");
 
         const accessToken = hashParams.get("access_token");
         const refreshToken = hashParams.get("refresh_token");
 
-        /*
-          Case 1:
-          Link has ?code=xxxx
-        */
-        if (code) {
-          const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
+        if (tokenHash && type === "recovery") {
+          const { data, error } = await supabaseClient.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: "recovery"
+          });
 
           if (error) {
             throw error;
           }
 
-          if (!data.session) {
-            throw new Error("Session not created.");
+          if (!data || !data.session) {
+            throw new Error("Recovery session was not created.");
           }
 
           enableForm();
           return;
         }
 
-        /*
-          Case 2:
-          Link has #access_token=xxxx&refresh_token=xxxx
-        */
         if (accessToken && refreshToken) {
           const { data, error } = await supabaseClient.auth.setSession({
             access_token: accessToken,
@@ -223,26 +231,15 @@
             throw error;
           }
 
-          if (!data.session) {
-            throw new Error("Session not created.");
+          if (!data || !data.session) {
+            throw new Error("Session was not created.");
           }
 
           enableForm();
           return;
         }
 
-        /*
-          Case 3:
-          Supabase automatically detects session from URL
-        */
-        const { data } = await supabaseClient.auth.getSession();
-
-        if (data && data.session) {
-          enableForm();
-          return;
-        }
-
-        throw new Error("Invalid or expired reset link.");
+        throw new Error("Invalid reset link.");
 
       } catch (error) {
         console.log("Reset link error:", error);
@@ -304,9 +301,13 @@
           throw error;
         }
 
-        showMessage("Password updated successfully. You can now login in the app.", "success");
+        showMessage(
+          "Password updated successfully. You can now login in the mobile app.",
+          "success"
+        );
 
         statusText.innerText = "Password updated successfully.";
+
         submitBtn.innerText = "Updated ✅";
 
         newPassword.disabled = true;
@@ -341,6 +342,12 @@
     function showMessage(text, type) {
       messageBox.innerText = text;
       messageBox.className = "message " + type;
+      messageBox.style.display = "block";
+    }
+
+    function hideMessage() {
+      messageBox.innerText = "";
+      messageBox.style.display = "none";
     }
   </script>
 
