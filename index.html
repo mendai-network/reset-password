@@ -3,135 +3,126 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reset Your Password - MendAI</title>
+
+  <title>Reset Password - MendAI</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      background-color: #f3f4f6;
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      height: 100vh;
       margin: 0;
-      padding: 16px;
-      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .card {
       background: white;
+      width: 90%;
+      max-width: 380px;
       padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      width: 100%;
-      max-width: 380px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
       text-align: center;
     }
 
     h2 {
-      color: #1f2937;
       margin-bottom: 10px;
-      font-size: 24px;
+      color: #111827;
     }
 
     p {
       color: #6b7280;
       font-size: 14px;
-      margin-bottom: 20px;
       line-height: 1.5;
     }
 
-    .input-wrapper {
-      position: relative;
-      margin: 12px 0;
+    .input-box {
       text-align: left;
+      margin-top: 15px;
+      position: relative;
     }
 
     label {
-      font-size: 13px;
-      color: #4b5563;
-      font-weight: 500;
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
+      font-size: 13px;
+      color: #374151;
+      font-weight: bold;
     }
 
     input {
       width: 100%;
       padding: 12px;
-      padding-right: 42px;
+      padding-right: 40px;
+      font-size: 15px;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       box-sizing: border-box;
-      font-size: 16px;
-      outline: none;
     }
 
     input:focus {
+      outline: none;
       border-color: #3ecf8e;
-      box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.2);
+      box-shadow: 0 0 0 2px rgba(62,207,142,0.2);
     }
 
     input:disabled {
-      background-color: #f9fafb;
+      background: #f9fafb;
       cursor: not-allowed;
     }
 
-    .toggle-btn {
+    .eye {
       position: absolute;
-      right: 12px;
+      right: 10px;
       top: 34px;
       background: none;
       border: none;
       cursor: pointer;
       font-size: 16px;
-      padding: 0;
-      color: #6b7280;
-      outline: none;
     }
 
-    button.submit {
+    .submit {
       width: 100%;
+      margin-top: 20px;
       padding: 12px;
-      background-color: #3ecf8e;
-      color: white;
       border: none;
-      border-radius: 6px;
+      background: #3ecf8e;
+      color: white;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: bold;
+      border-radius: 6px;
       cursor: pointer;
-      margin-top: 15px;
-      transition: background 0.2s;
     }
 
-    button.submit:hover {
-      background-color: #2e9d6b;
-    }
-
-    button.submit:disabled {
-      background-color: #9ca3af;
+    .submit:disabled {
+      background: #9ca3af;
       cursor: not-allowed;
     }
 
     .message {
-      margin-top: 15px;
-      font-size: 14px;
       display: none;
+      margin-top: 15px;
       padding: 10px;
       border-radius: 6px;
+      font-size: 14px;
       line-height: 1.4;
     }
 
     .success {
+      display: block;
+      background: #f0fdf4;
       color: #15803d;
-      background-color: #f0fdf4;
       border: 1px solid #bbf7d0;
     }
 
     .error {
+      display: block;
+      background: #fef2f2;
       color: #b91c1c;
-      background-color: #fef2f2;
       border: 1px solid #fecaca;
     }
   </style>
@@ -140,81 +131,68 @@
 <body>
 
   <div class="card">
-    <h2>New Password</h2>
-    <p id="status-text">Verifying your password reset link...</p>
+    <h2>Reset Password</h2>
 
-    <div class="input-wrapper">
-      <label for="new-password">New Password</label>
-      <input type="password" id="new-password" placeholder="Min. 6 characters" disabled />
-      <button type="button" class="toggle-btn" onclick="toggleVisibility('new-password', this)">👁️</button>
+    <p id="statusText">Checking your reset link...</p>
+
+    <div class="input-box">
+      <label>New Password</label>
+      <input type="password" id="newPassword" placeholder="Enter new password" disabled />
+      <button class="eye" type="button" onclick="togglePassword('newPassword', this)">👁️</button>
     </div>
 
-    <div class="input-wrapper">
-      <label for="confirm-password">Confirm Password</label>
-      <input type="password" id="confirm-password" placeholder="Re-enter password" disabled />
-      <button type="button" class="toggle-btn" onclick="toggleVisibility('confirm-password', this)">👁️</button>
+    <div class="input-box">
+      <label>Confirm Password</label>
+      <input type="password" id="confirmPassword" placeholder="Confirm new password" disabled />
+      <button class="eye" type="button" onclick="togglePassword('confirmPassword', this)">👁️</button>
     </div>
 
-    <button id="submit-btn" class="submit" onclick="handlePasswordReset()" disabled>
+    <button id="submitBtn" class="submit" onclick="updatePassword()" disabled>
       Please Wait...
     </button>
 
-    <div id="msg" class="message"></div>
+    <div id="messageBox" class="message"></div>
   </div>
 
   <script>
     /*
-      IMPORTANT:
-      Replace these two values with your real Supabase project values.
-
-      SUPABASE_URL example:
-      https://abcxyz.supabase.co
-
-      SUPABASE_ANON_KEY:
-      Project Settings > API > anon public key
+      YAHAN APNI SUPABASE DETAILS LAGANI HAIN
     */
 
     const SUPABASE_URL = "https://cvsvgufcupscsyalgnvl.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_rW_g0Diq0QXbMcbeahxS6g_3R-_PEEB";
 
-    const supabaseClient = supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY,
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
       }
-    );
-
-    const statusText = document.getElementById("status-text");
-    const submitBtn = document.getElementById("submit-btn");
-    const pass1 = document.getElementById("new-password");
-    const pass2 = document.getElementById("confirm-password");
-
-    window.addEventListener("DOMContentLoaded", async () => {
-      await verifyResetLink();
     });
 
-    async function verifyResetLink() {
-      try {
-        showMsg("", "");
+    const statusText = document.getElementById("statusText");
+    const newPassword = document.getElementById("newPassword");
+    const confirmPassword = document.getElementById("confirmPassword");
+    const submitBtn = document.getElementById("submitBtn");
+    const messageBox = document.getElementById("messageBox");
 
+    window.onload = async function () {
+      await checkResetLink();
+    };
+
+    async function checkResetLink() {
+      try {
         const queryParams = new URLSearchParams(window.location.search);
-        const hashParams = new URLSearchParams(window.location.hash.replace("#", ""));
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
         const code = queryParams.get("code");
 
         const accessToken = hashParams.get("access_token");
         const refreshToken = hashParams.get("refresh_token");
-        const type = hashParams.get("type");
 
         /*
           Case 1:
-          Supabase PKCE link:
-          https://your-page.com/?code=xxxx
+          Link has ?code=xxxx
         */
         if (code) {
           const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
@@ -223,18 +201,17 @@
             throw error;
           }
 
-          if (!data || !data.session) {
-            throw new Error("Session was not created from the reset link.");
+          if (!data.session) {
+            throw new Error("Session not created.");
           }
 
-          enablePasswordForm();
+          enableForm();
           return;
         }
 
         /*
           Case 2:
-          Supabase implicit recovery link:
-          https://your-page.com/#access_token=xxx&refresh_token=xxx&type=recovery
+          Link has #access_token=xxxx&refresh_token=xxxx
         */
         if (accessToken && refreshToken) {
           const { data, error } = await supabaseClient.auth.setSession({
@@ -246,125 +223,124 @@
             throw error;
           }
 
-          if (!data || !data.session) {
-            throw new Error("Session was not created from recovery tokens.");
+          if (!data.session) {
+            throw new Error("Session not created.");
           }
 
-          enablePasswordForm();
+          enableForm();
           return;
         }
 
         /*
-          If neither code nor tokens exist.
+          Case 3:
+          Supabase automatically detects session from URL
         */
-        throw new Error("No valid password reset token found in the URL.");
+        const { data } = await supabaseClient.auth.getSession();
+
+        if (data && data.session) {
+          enableForm();
+          return;
+        }
+
+        throw new Error("Invalid or expired reset link.");
 
       } catch (error) {
-        console.error("Reset link verification error:", error);
+        console.log("Reset link error:", error);
 
-        statusText.innerText = "Reset link validation failed.";
-        showMsg(
-          "Verification failed. The link may be expired, already used, or opened incorrectly. Please request a new password reset link from the mobile app.",
+        statusText.innerText = "Reset link is invalid or expired.";
+
+        showMessage(
+          "This reset link is invalid or expired. Please request a new password reset link from the app.",
           "error"
         );
 
-        disablePasswordForm();
+        disableForm();
       }
     }
 
-    function enablePasswordForm() {
-      statusText.innerText = "Link verified successfully. Please enter your new password.";
-      statusText.style.color = "#4b5563";
+    function enableForm() {
+      statusText.innerText = "Link verified. Please enter your new password.";
 
-      pass1.disabled = false;
-      pass2.disabled = false;
+      newPassword.disabled = false;
+      confirmPassword.disabled = false;
+
       submitBtn.disabled = false;
       submitBtn.innerText = "Update Password";
+
+      showMessage("Reset link verified successfully.", "success");
     }
 
-    function disablePasswordForm() {
-      pass1.disabled = true;
-      pass2.disabled = true;
+    function disableForm() {
+      newPassword.disabled = true;
+      confirmPassword.disabled = true;
+
       submitBtn.disabled = true;
-      submitBtn.innerText = "Link Invalid";
+      submitBtn.innerText = "Invalid Link";
     }
 
-    function toggleVisibility(fieldId, btn) {
-      const inputField = document.getElementById(fieldId);
+    async function updatePassword() {
+      const password = newPassword.value.trim();
+      const confirm = confirmPassword.value.trim();
 
-      if (inputField.type === "password") {
-        inputField.type = "text";
-        btn.innerText = "🙈";
-      } else {
-        inputField.type = "password";
-        btn.innerText = "👁️";
-      }
-    }
-
-    async function handlePasswordReset() {
-      const passwordInput = pass1.value.trim();
-      const confirmInput = pass2.value.trim();
-
-      if (!passwordInput || passwordInput.length < 6) {
-        showMsg("Password must be at least 6 characters long.", "error");
+      if (password.length < 6) {
+        showMessage("Password must be at least 6 characters.", "error");
         return;
       }
 
-      if (passwordInput !== confirmInput) {
-        showMsg("Passwords do not match. Please check again.", "error");
+      if (password !== confirm) {
+        showMessage("Passwords do not match.", "error");
         return;
       }
 
+      submitBtn.disabled = true;
       submitBtn.innerText = "Updating...";
-      submitBtn.disabled = true;
 
       try {
         const { data, error } = await supabaseClient.auth.updateUser({
-          password: passwordInput
+          password: password
         });
 
         if (error) {
           throw error;
         }
 
-        showMsg("Password updated successfully. You can now log in to the mobile app.", "success");
+        showMessage("Password updated successfully. You can now login in the app.", "success");
 
-        statusText.innerText = "Password reset completed.";
+        statusText.innerText = "Password updated successfully.";
         submitBtn.innerText = "Updated ✅";
 
-        pass1.disabled = true;
-        pass2.disabled = true;
+        newPassword.disabled = true;
+        confirmPassword.disabled = true;
 
-        /*
-          Optional:
-          Sign out from this browser page after password update.
-          This keeps the reset page clean.
-        */
-        setTimeout(async () => {
+        setTimeout(async function () {
           await supabaseClient.auth.signOut();
         }, 1000);
 
       } catch (error) {
-        console.error("Password update error:", error);
+        console.log("Update password error:", error);
 
-        showMsg(error.message || "Password update failed. Please try again.", "error");
+        showMessage(error.message || "Password update failed.", "error");
 
-        submitBtn.innerText = "Update Password";
         submitBtn.disabled = false;
+        submitBtn.innerText = "Update Password";
       }
     }
 
-    function showMsg(text, type) {
-      const msgDiv = document.getElementById("msg");
+    function togglePassword(inputId, button) {
+      const input = document.getElementById(inputId);
 
-      if (!text) {
-        msgDiv.style.display = "none";
-        return;
+      if (input.type === "password") {
+        input.type = "text";
+        button.innerText = "🙈";
+      } else {
+        input.type = "password";
+        button.innerText = "👁️";
       }
+    }
 
-      msgDiv.innerText = text;
-      msgDiv.className = "message " + type;
-      msgDiv.style.display = "block";
+    function showMessage(text, type) {
+      messageBox.innerText = text;
+      messageBox.className = "message " + type;
     }
   </script>
 
