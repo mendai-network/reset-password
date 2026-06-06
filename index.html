@@ -71,21 +71,26 @@
         }
     }
 
-    // 3. UPDATE PASSWORD FUNCTION WITH CONFIRMATION CHECK
-    async function handlePasswordReset() {
+async function handlePasswordReset() {
         const passwordInput = document.getElementById('new-password').value;
         const confirmInput = document.getElementById('confirm-password').value;
         const submitBtn = document.getElementById('submit-btn');
 
-        // Validation 1: Length Check
+        // 1. Pehle validation check karein
         if (!passwordInput || passwordInput.length < 6) {
             showMsg("Password must be at least 6 characters long.", "error");
             return;
         }
-
-        // Validation 2: Match Check
         if (passwordInput !== confirmInput) {
             showMsg("Passwords do not match. Please check again.", "error");
+            return;
+        }
+
+        // 2. CRITICAL: Check karein ke kya browser mein session aa chuka hai?
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        
+        if (!sessionData.session) {
+            showMsg("Auth session missing! Please click the link from your email again. The link might be expired.", "error");
             return;
         }
 
@@ -93,7 +98,6 @@
         submitBtn.disabled = true;
 
         try {
-            // Processing updates on Supabase backend
             const { data, error } = await supabaseClient.auth.updateUser({
                 password: passwordInput
             });
@@ -110,6 +114,7 @@
         }
     }
 
+    // 4. SHOW MESSAGE FUNCTION (Yeh bhi aise hi niche rahega)
     function showMsg(text, type) {
         const msgDiv = document.getElementById('msg');
         msgDiv.innerText = text;
